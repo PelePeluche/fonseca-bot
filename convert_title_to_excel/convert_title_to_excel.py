@@ -4,10 +4,6 @@ from PyPDF2 import PdfReader
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-import os
-
-from config import titles_foldername
-
 
 
 def read_pdf_as_plain_text(pdf_path):
@@ -23,7 +19,8 @@ def extract_fields_from_text(text, filename):
     fields = {"Archivo": filename}
     try:
         # Expresión regular modificada para hacer que el CUIL sea opcional
-        pattern = r"(?P<nombre>.+?)\s+(?:(?P<cuil>\d+)\s+)?(?P<reparticion>Inmueble|Automotor|Comercio e Industria)\s+(?P<orden>\d+/\d{4})\s+(?P<identificador>\S+)"
+        # Expresión regular modificada para incluir 'TA (Tasa Administrativa)', 'AUT (Automotor)', 'INM (Inmueble)', 'CI (Comercio e Industria)'
+        pattern = r"(?P<nombre>.+?)\s+(?:(?P<cuil>\d+)\s+)?(?P<reparticion>Inmueble|Automotor|Comercio e Industria|TA \(Tasa Administrativa\)|AUT \(Automotor\)|INM \(Inmueble\)|CI \(Comercio e Industria\))\s+(?P<orden>\d+/\d{4})\s+(?P<identificador>\S+)"
         match = re.search(pattern, text)
         if match:
             fields["Nombre o Razón Social"] = match.group("nombre").strip()
@@ -100,19 +97,20 @@ def extract_fields_from_text(text, filename):
 
 def read_pdfs_in_folder(folder_path, output_excel_path):
     data = []
-    # Iterate over all PDF files in the given folder
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".pdf"):
-            pdf_path = os.path.join(folder_path, filename)
-            print(f"Reading content from {filename}...")
-            text = read_pdf_as_plain_text(pdf_path)
-            print(text)
-            fields = extract_fields_from_text(text, filename)
-            if fields:
-                print(
-                    f"Fields extracted from {filename}: {fields}"
-                )  # Print extracted fields for verification
-                data.append(fields)
+    # Iterate over all PDF files in the given folder and subfolders
+    for root, dirs, files in os.walk(folder_path):
+        for filename in files:
+            if filename.endswith(".pdf"):
+                pdf_path = os.path.join(root, filename)
+                print(f"Reading content from {filename}...")
+                text = read_pdf_as_plain_text(pdf_path)
+                # print(text)
+                fields = extract_fields_from_text(text, filename)
+                if fields:
+                    print(
+                        f"Fields extracted from {filename}: {fields}"
+                    )  # Print extracted fields for verification
+                    data.append(fields)
 
     # Convert the data to a DataFrame and save to Excel
     df = pd.DataFrame(data)
@@ -143,7 +141,9 @@ def read_pdfs_in_folder(folder_path, output_excel_path):
     print(f"Data successfully saved to {output_excel_path}")
 
 
-# Example usage
-folder_path = "./titles/" + titles_foldername  # Replace with your folder path
-output_excel_path = "titles.xlsx"
-read_pdfs_in_folder(folder_path, output_excel_path)
+if __name__ == "__main__":
+    # Example usage
+    # Scan only the specific folder requested by the user
+    folder_path = "/home/peluche/Escritorio/Ramiro Bot/sonzini-bot/titles/Sonzini-1064_firmado (22-12-2025)"
+    output_excel_path = "/home/peluche/Escritorio/Ramiro Bot/sonzini-bot/Sonzini-1064_firmado (22-12-2025).xlsx"
+    read_pdfs_in_folder(folder_path, output_excel_path)
