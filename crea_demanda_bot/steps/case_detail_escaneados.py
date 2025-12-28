@@ -1,9 +1,44 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    ElementClickInterceptedException,
+    StaleElementReferenceException,
+)
 import time
 import os
+
+
+def _safe_click(driver, wait, by_locator, retries: int = 5):
+    last_exc = None
+    for _ in range(retries):
+        try:
+            el = wait.until(EC.element_to_be_clickable(by_locator))
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});",
+                el,
+            )
+            time.sleep(0.25)
+            el.click()
+            return
+        except (ElementClickInterceptedException, StaleElementReferenceException) as e:
+            last_exc = e
+            try:
+                el = wait.until(EC.presence_of_element_located(by_locator))
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});",
+                    el,
+                )
+                time.sleep(0.25)
+                driver.execute_script("arguments[0].click();", el)
+                return
+            except Exception as js_e:
+                last_exc = js_e
+                time.sleep(0.5)
+    if last_exc:
+        raise last_exc
 
 
 def case_detail_escaneados(driver, case_data, numero_decreto, fecha_decreto):
@@ -12,7 +47,7 @@ def case_detail_escaneados(driver, case_data, numero_decreto, fecha_decreto):
     """
     wait = WebDriverWait(driver, 20)
 
-    otros_si_digo = "Que manifiesto bajo fe de juramento que mi nombramiento como Procurador Municipal efectuado por Resolución N° 187/2020 del 20/04/2020 de la Secretaría de Economía y Finanzas de la Municipalidad de Córdoba se encuentra vigente, subsistiendo al día de la fecha, ratificando en todos sus términos la juramentación realizada oportunamente."
+    # otros_si_digo = "Que manifiesto bajo fe de juramento que mi nombramiento como Procurador Municipal efectuado por Resolución N° 187/2020 del 20/04/2020 de la Secretaría de Economía y Finanzas de la Municipalidad de Córdoba se encuentra vigente, subsistiendo al día de la fecha, ratificando en todos sus términos la juramentación realizada oportunamente."
 
     try:
         # Obtener el directorio base del archivo actual
@@ -51,8 +86,7 @@ def case_detail_escaneados(driver, case_data, numero_decreto, fecha_decreto):
 
         # Guardar
         print("Haciendo clic en 'Guardar'...")
-        guardar_button = wait.until(EC.element_to_be_clickable((By.ID, "btnGuardar")))
-        guardar_button.click()
+        _safe_click(driver, wait, (By.ID, "btnGuardar"))
         print("'Guardar' clickeado.")
 
         # Desplazarse hacia abajo
@@ -61,8 +95,7 @@ def case_detail_escaneados(driver, case_data, numero_decreto, fecha_decreto):
 
         # Cargar demanda
         print("Haciendo clic en 'Demanda'...")
-        demanda_button = wait.until(EC.element_to_be_clickable((By.ID, "btnDemanda")))
-        demanda_button.click()
+        _safe_click(driver, wait, (By.ID, "btnDemanda"))
         print("'Demanda' clickeado.")
 
         time.sleep(1)

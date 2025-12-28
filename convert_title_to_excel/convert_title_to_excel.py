@@ -1,9 +1,12 @@
+import argparse
 import os
 import re
-from PyPDF2 import PdfReader
+from pathlib import Path
+
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Alignment, Font, PatternFill
+from PyPDF2 import PdfReader
 
 
 def read_pdf_as_plain_text(pdf_path):
@@ -97,6 +100,13 @@ def extract_fields_from_text(text, filename):
 
 def read_pdfs_in_folder(folder_path, output_excel_path):
     data = []
+    folder = Path(folder_path)
+    if not folder.exists() or not folder.is_dir():
+        raise FileNotFoundError(f"Input folder does not exist or is not a directory: {folder}")
+
+    output_path = Path(output_excel_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     # Iterate over all PDF files in the given folder and subfolders
     for root, dirs, files in os.walk(folder_path):
         for filename in files:
@@ -115,10 +125,14 @@ def read_pdfs_in_folder(folder_path, output_excel_path):
     # Convert the data to a DataFrame and save to Excel
     df = pd.DataFrame(data)
     print(df)  # Print the DataFrame to verify the extracted data
-    df.to_excel(output_excel_path, index=False)
+    if df.empty:
+        print("No PDF data extracted. Skipping Excel generation.")
+        return
+
+    df.to_excel(str(output_path), index=False)
 
     # Apply formatting to the Excel file
-    workbook = load_workbook(output_excel_path)
+    workbook = load_workbook(str(output_path))
     worksheet = workbook.active
 
     # Apply styles to header row
@@ -137,13 +151,21 @@ def read_pdfs_in_folder(folder_path, output_excel_path):
         worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
 
     # Save the formatted Excel file
-    workbook.save(output_excel_path)
-    print(f"Data successfully saved to {output_excel_path}")
+    workbook.save(str(output_path))
+    print(f"Data successfully saved to {output_path}")
 
 
 if __name__ == "__main__":
-    # Example usage
-    # Scan only the specific folder requested by the user
-    folder_path = "/home/peluche/Escritorio/Ramiro Bot/sonzini-bot/titles/Sonzini-1064_firmado (22-12-2025)"
-    output_excel_path = "/home/peluche/Escritorio/Ramiro Bot/sonzini-bot/Sonzini-1064_firmado (22-12-2025).xlsx"
-    read_pdfs_in_folder(folder_path, output_excel_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--folder",
+        default=str(Path.cwd()),
+        help="Folder containing PDFs (scanned recursively)",
+    )
+    parser.add_argument(
+        "--out",
+        default=str(Path.cwd() / "titles.xlsx"),
+        help="Output Excel path",
+    )
+    args = parser.parse_args()
+    read_pdfs_in_folder(args.folder, args.out)

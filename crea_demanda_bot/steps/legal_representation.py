@@ -9,6 +9,7 @@ import time
 
 def step_legal_representation(driver, procurador, municipalidad_keyname_to_represent):
     wait = WebDriverWait(driver, 20)
+    time.sleep(0.5)
 
     try:
         # Desplazarse hacia el botón "Nuevo Patrocinio" para asegurarse de que esté visible
@@ -52,6 +53,7 @@ def step_legal_representation(driver, procurador, municipalidad_keyname_to_repre
     except Exception as e:
         print(f"Error inesperado: {e}")
 
+    time.sleep(0.5)
     try:
         print("Intentando hacer clic en 'Ir a...'")
         ir_a_button = wait.until(EC.element_to_be_clickable((By.ID, "btnSiguiente")))

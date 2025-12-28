@@ -55,7 +55,19 @@ Thumbs.db
 entregados/
 titles/
 TITLES ARCHIVED/
+titles archived/
+Titles Archived/
+titles_archived/
+titles-archived/
 TF - Iniciar Nov. 2025-20251219T190932Z-3-001/
+
+# Bot tables (generated)
+crea_demanda_bot/tables/*.xlsx
+crea_demanda_bot/tables/*.xls
+
+# Local data folders
+TRIBUTOS - Para iniciar dic. 2025/
+TRIBUTOS/
 
 # Sensitive data
 *.env

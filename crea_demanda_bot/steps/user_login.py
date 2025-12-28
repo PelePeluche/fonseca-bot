@@ -18,4 +18,5 @@ def user_login(driver, matricula, password):
     user_input.send_keys(Keys.TAB)
     time.sleep(1)
     driver.switch_to.active_element.send_keys(password + Keys.ENTER)
+    time.sleep(1)
     

@@ -3,12 +3,43 @@ from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
     TimeoutException,
+    ElementClickInterceptedException,
     StaleElementReferenceException,
     NoSuchElementException,
 )
 import time
 
 # File: step2_common_parts.py
+
+
+def _safe_click(driver, wait, by_locator, retries: int = 5):
+    last_exc: Exception | None = None
+    for _ in range(retries):
+        try:
+            el = wait.until(EC.element_to_be_clickable(by_locator))
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});",
+                el,
+            )
+            time.sleep(0.25)
+            el.click()
+            return
+        except (ElementClickInterceptedException, StaleElementReferenceException) as e:
+            last_exc = e
+            try:
+                el = wait.until(EC.presence_of_element_located(by_locator))
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center', inline: 'nearest'});",
+                    el,
+                )
+                time.sleep(0.25)
+                driver.execute_script("arguments[0].click();", el)
+                return
+            except Exception as js_e:
+                last_exc = js_e
+                time.sleep(0.5)
+    if last_exc:
+        raise last_exc
 
 
 def step_2_common_parts(driver, case_data, municipalidad_keyname_to_search):
@@ -55,8 +86,7 @@ def step_2_common_parts(driver, case_data, municipalidad_keyname_to_search):
                 time.sleep(1)
 
         # Click on the save button
-        save_button = wait.until(EC.element_to_be_clickable((By.ID, "btnGuardar")))
-        save_button.click()
+        _safe_click(driver, wait, (By.ID, "btnGuardar"))
 
         # Add the "Municipalidad de Córdoba"
         new_legal_party_button = wait.until(
@@ -96,8 +126,7 @@ def step_2_common_parts(driver, case_data, municipalidad_keyname_to_search):
         select.select_by_visible_text("ACTOR PRINCIPAL")
 
         # Click on the "Guardar" button after adding "Municipalidad de Córdoba"
-        save_button = wait.until(EC.element_to_be_clickable((By.ID, "btnGuardar")))
-        save_button.click()
+        _safe_click(driver, wait, (By.ID, "btnGuardar"))
 
         time.sleep(1)
 
@@ -155,8 +184,10 @@ def step_2_common_parts(driver, case_data, municipalidad_keyname_to_search):
 
     except TimeoutException:
         print("Timeout: Could not complete step 2.")
+        raise
     except Exception as e:
         print(f"Error completing step 2: {e}")
+        raise
 
 
 def fill_juridical_part_form(driver, case_data):
@@ -244,8 +275,7 @@ def fill_juridical_part_form(driver, case_data):
 
     # 8. Click 'Guardar'
     try:
-        guardar_button = wait.until(EC.element_to_be_clickable((By.ID, "btnGuardar")))
-        guardar_button.click()
+        _safe_click(driver, wait, (By.ID, "btnGuardar"))
         print("Formulario guardado.")
     except TimeoutException:
         print("Timeout: No se pudo hacer click en 'Guardar'.")
@@ -325,8 +355,7 @@ def fill_human_part_form(driver, case_data):
     time.sleep(1)
 
     # Click the 'Guardar' button
-    guardar_button = wait.until(EC.element_to_be_clickable((By.ID, "btnGuardar")))
-    guardar_button.click()
+    _safe_click(driver, wait, (By.ID, "btnGuardar"))
 
 
 def split_name_simple(full_name):

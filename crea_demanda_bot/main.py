@@ -1,4 +1,11 @@
+import argparse
 import os
+import sys
+from pathlib import Path
+
+base_path = Path(__file__).resolve().parent
+sys.path.insert(0, str(base_path))
+
 import pandas as pd
 from steps.driver_setup import setup_driver
 from steps.user_login import user_login
@@ -12,16 +19,22 @@ from steps.case_detail import case_detail
 from steps.get_presentation_number import get_presentation_number
 from steps.finish import finish
 from config import users, digital_firmados_iniciar_demanda_filename
+import time
 
+def main(excel_filename: str | None = None):
+    base_path = Path(__file__).resolve().parent
+    filename_path = Path(excel_filename or digital_firmados_iniciar_demanda_filename)
 
-def main():
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    excel_path = os.path.join(
-        base_path, "tables", digital_firmados_iniciar_demanda_filename
-    )
+    if filename_path.is_absolute():
+        excel_path = filename_path
+    else:
+        excel_path = base_path / "tables" / filename_path
+        if not excel_path.exists():
+            repo_root = base_path.parent
+            excel_path = repo_root / filename_path
 
     # Verificamos si el archivo Excel existe
-    if not os.path.exists(excel_path):
+    if not excel_path.exists():
         print("El archivo Excel no se encontró.")
         return
 
@@ -95,7 +108,7 @@ def execute_steps(driver, row):
         "Identificador": row["Identificador"],
     }
 
-    user_key = "SONZINI"
+    user_key = "FONSECA"
 
     username = users[user_key]["matricula"]
     password = users[user_key]["password"]
@@ -109,18 +122,32 @@ def execute_steps(driver, row):
 
     # Ejecutamos los steps necesarios con el driver
     user_login(driver, username, password)
+    time.sleep(0.5)
     open_new_tab(driver)
+    time.sleep(0.5)
     click_new_presentation(driver)
+    time.sleep(0.5)
     fill_presentation_data_step(driver)
+    time.sleep(0.5)
     step_2_common_parts(driver, case_data, municipalidad_keyname_to_search)
+    time.sleep(0.5)
     step_legal_representation(driver, procurador, municipalidad_keyname_to_represent)
+    time.sleep(0.5)
     step_new_case(driver)
+    time.sleep(0.5)
     case_detail(driver, case_data, numero_decreto, fecha_decreto)
+    time.sleep(0.5)
     presentation_number = get_presentation_number(driver)
+    time.sleep(0.5)
     finish(driver)
+    time.sleep(0.5)
 
     return presentation_number
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--excel", default=None)
+    args = parser.parse_args()
+
+    main(excel_filename=args.excel)
